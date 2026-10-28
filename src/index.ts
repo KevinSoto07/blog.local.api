@@ -1,8 +1,15 @@
+import * as os from "os";
 import express, { Request, Response } from "express";
 import { readJSON, writeJSON } from "./db";
 
 const app = express();
 app.use(express.json());
+app.use((req,res,next) => {
+  res.on("finish", () => {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode}`);
+  })
+  next();
+})
 
 interface Articulo {
   id: number;
@@ -80,6 +87,25 @@ app.delete("/articulos/:id", (req, res) => {
 
 // ---------- Arranque ----------
 const PORT = Number(process.env.PORT) || 9000;
+
+app.get("/health", (req: Request, res: Response) => {
+    if (req.query.simular === "falla") {
+        return res.status(503).json({
+            estado: "no saludable",
+            nodo: os.hostname(),
+            timestamp: new Date().toISOString(),
+            mensaje: "Falla simulada"
+        })
+    }
+    
+    //Normalmente aqui se verificaria BD, Redis, etc.
+    res.status(200).json({
+        estado: "saludable",
+        nodo: os.hostname(),
+        timestamp: new Date().toISOString(),
+    })
+})
+
 app.listen(PORT, () => {
   console.log(`blog.local escuchando en http://localhost:${PORT}`);
 });
